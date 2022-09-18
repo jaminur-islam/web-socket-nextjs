@@ -1,65 +1,82 @@
 import { Server } from "socket.io";
-import os from "os";
-const username = os.userInfo().username;
-let count = 0;
-let user_map = new Map();
-const ioHandler = (req, res) => {
-  /* const forwarded = req.headers["x-forwarded-for"];
-  const ip = forwarded
-    ? forwarded.split(/, /)[0]
-    : req.connection.remoteAddress; */
 
+import {
+  getAllUserFormDatabase,
+  insertUserToDatabase,
+  getUniqueUser,
+} from "../../utils/dbOperation";
+
+const messageList = [];
+let user_map = new Map();
+var userIsConnected = true;
+
+const ioHandler = (req, res) => {
   if (!res.socket.server.io) {
-    console.log("*First use, starting socket.io");
     const io = new Server(res.socket.server);
 
-    io.on("connection", (socket) => {
-      // socket.broadcast.emit("a user connected");
+    io.on("connection", async (socket) => {
+      socket.emit("all_users", await db.user.findMany());
 
-      console.log("Active user: " + ++count);
-      socket.on("new_visitor", (user) => {
-        io.emit("get_users", getUser(user));
+      socket.on("new_visitor", async (user) => {
+        userIsConnected = true;
+        const findUser = await getUniqueUser(user.name);
+
+        if (findUser) {
+          setToActiveList(findUser);
+          const socketUserFind = user_map.get(findUser?.id);
+          socketUserFind.socket = socket;
+          io.emit("get_active_users", getActiveList());
+          socket.userId = findUser.id;
+        } else {
+          let insertedUser = await insertUserToDatabase(user);
+          socket.userId = insertedUser.id;
+          setToActiveList(insertedUser);
+          io.emit("get_active_users", getActiveList());
+        }
       });
-
-      /*   socket.on("join_room", (room) => {
-        socket.join(room);
-      });
-
-      socket.on("message", ({ room, message }) => {
-        socket.to(room).emit("message", {
-          message,
-          name: "Friend",
-        });
-      }); */
 
       socket.on("disconnect", () => {
-        console.log("a user disconnected");
-        console.log("Active user: " + --count);
-        io.emit("get_users", getUser(null, socket.id));
+        userIsConnected = false;
+        setTimeout(() => {
+          if (userIsConnected) {
+            io.emit("get_active_users", getActiveList());
+          } else {
+            deleteActiveUser(socket.userId);
+            io.emit("get_active_users", getActiveList());
+          }
+        }, 3000);
       });
-      // SET USER AND DELETE USER
-      const getUser = (user, id) => {
-        let user_array;
-        if (id) {
-          user_map.delete(id);
-          user_array = Array.from(user_map, ([name, value]) => value);
-          io.emit("get_users", user_array);
-        } else {
-          user.id = socket.id;
-          user.username = username;
-          user_map.set(socket.id, user);
-          user_array = Array.from(user_map, ([name, value]) => value);
-        }
-        return user_array;
+
+      // SET SOCKET USER
+      const setToActiveList = (user) => {
+        user_map.set(user.id, {
+          socket: socket,
+          user: user,
+        });
       };
+
+      // GET TO ACTIVE LIST
+      const getActiveList = () => {
+        return Array.from(user_map, ([name, value]) => value.user);
+      };
+
+      // DELETE SOCKET USER
+      const deleteActiveUser = (id) => {
+        user_map.delete(id);
+      };
+
+      socket.on("message", (message) => {
+        console.log(message);
+        let receiver = user_map.get(message.receiverId).socket;
+        messageList.push(message.message);
+        receiver.emit("message", messageList);
+      });
     });
 
     res.socket.server.io = io;
   } else {
     console.log("socket.io already running");
   }
-
-  const io = res.socket.server.io;
   res.end();
 };
 

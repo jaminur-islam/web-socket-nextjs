@@ -3,5 +3,5 @@ const path = require("path");
 
 export default function handler(req, res) {
   console.log("hi path", path);
-  res.status(200).json({ name: "John Doe" });
+  res.status(200).json({ name: "John Doe " });
 }
