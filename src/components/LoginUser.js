@@ -1,38 +1,15 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 
-export const LoginUser = ({
-  socket,
-  setActiveUserName,
-  setSenderUser,
-  setMessage,
-  setActiveUserList,
-  activeUserList,
-}) => {
+export const LoginUser = ({ socket }) => {
   const userNameRef = useRef();
-  useEffect(() => {
-    console.log({ activeUserList });
-    const senderUserFind = activeUserList.find(
-      (user) => user.name === localStorage?.getItem("userName")
-    );
-    console.log(senderUserFind);
-
-    setSenderUser(senderUserFind);
-    setActiveUserName(localStorage.getItem("userName"));
-  }, [activeUserList]);
 
   const handleFrom = async (e) => {
     e.preventDefault();
-    socket.on("message", (msg) => {
-      setMessage(msg);
-    });
 
     socket.emit("new_visitor", {
       name: userNameRef.current.value,
     });
 
-    socket.on("get_active_users", (activeUserList) => {
-      setActiveUserList(activeUserList);
-    });
     localStorage?.setItem("userName", userNameRef.current.value);
   };
 

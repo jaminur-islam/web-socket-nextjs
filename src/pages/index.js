@@ -26,7 +26,7 @@ export default function Home() {
     await fetch("/api/socket");
     socket = io();
     socket.on("all_users", (data) => {
-      console.log(data);
+      // console.log(data);
       setAllUsers(data);
     });
     if (localStorage.getItem("userName")) {
@@ -37,6 +37,32 @@ export default function Home() {
     socket.on("get_active_users", (activeUserList) => {
       setActiveUserList(activeUserList);
     });
+
+    socket.on("message", (msg) => {
+      setMessage((message) => [...message, msg]);
+    });
+  };
+  const [arr, setArr] = useState([]);
+
+  const handle = (s) => {
+    setArr([...arr, s]);
+  };
+
+  // console.log(message);
+
+  useEffect(() => {
+    const senderUserFind = activeUserList.find(
+      (user) => user.name === localStorage?.getItem("userName")
+    );
+    // console.log(senderUserFind);
+
+    setSenderUser(senderUserFind);
+    setActiveUserName(localStorage.getItem("userName"));
+  }, [activeUserList]);
+
+  const handleLogOut = () => {
+    setActiveUserName("");
+    localStorage.removeItem("userName");
   };
 
   return (
@@ -45,16 +71,23 @@ export default function Home() {
         <title>{activeUserName}</title>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
       </Head>
+      <div className="p-10 w-max ml-auto ">
+        {activeUserName ? (
+          <button
+            className="border px-3 py-2 rounded bg-red-500 text-white"
+            onClick={handleLogOut}
+          >
+            LogOut
+          </button>
+        ) : (
+          <button className="border px-3 py-2 rounded bg-green-400 text-white">
+            Login
+          </button>
+        )}
+      </div>
       {activeUserName ? <AllUsers allUser={allUser} /> : null}
       {!activeUserName ? (
-        <LoginUser
-          socket={socket}
-          setActiveUserList={setActiveUserList}
-          activeUserList={activeUserList}
-          setActiveUserName={setActiveUserName}
-          setMessage={setMessage}
-          setSenderUser={setSenderUser}
-        />
+        <LoginUser socket={socket} setMessage={setMessage} />
       ) : (
         <ActiveUserList
           activeUserList={activeUserList}

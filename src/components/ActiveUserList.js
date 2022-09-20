@@ -6,6 +6,7 @@ export const ActiveUserList = ({
   socket,
   senderUser,
 }) => {
+  // console.log("activeUserMessage", message);
   const [receiverUser, setReceiverUser] = useState({});
   const messageRef = useRef();
 
@@ -20,6 +21,9 @@ export const ActiveUserList = ({
       alert("Please select a user");
     }
   };
+
+  // console.log(message.filter((m) => m.receiverId === 56));
+
   return (
     <div>
       <h1 className="text-2xl ml-24"> Active users list </h1>
@@ -53,15 +57,18 @@ export const ActiveUserList = ({
           >
             Submit
           </button>
-
           <div className="p-4 border space-y-5 mt-10">
-            {message.map((m, index) => {
-              return (
-                <div key={index} className="border p-2">
-                  <div> {m} </div>
-                </div>
-              );
-            })}
+            {message
+              .filter((m) => m.senderId === receiverUser.id)
+              .map((m, index) => {
+                return (
+                  <div key={index} className="border p-2 flex justify-between">
+                    {/* <div> Send: {m.sender.name}</div> */}
+                    <div> {m.message} </div>
+                    {/* <div> Receive: {m.receiver.name} </div> */}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>

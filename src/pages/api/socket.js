@@ -4,18 +4,20 @@ import {
   getAllUserFormDatabase,
   insertUserToDatabase,
   getUniqueUser,
+  insertMessageToDatabase,
+  getAllMessageFromDatabase,
 } from "../../utils/dbOperation";
 
-const messageList = [];
 let user_map = new Map();
-var userIsConnected = true;
+let userIsConnected = true;
+const messages = [];
 
 const ioHandler = (req, res) => {
   if (!res.socket.server.io) {
     const io = new Server(res.socket.server);
 
     io.on("connection", async (socket) => {
-      socket.emit("all_users", await db.user.findMany());
+      socket.emit("all_users", await getAllUserFormDatabase());
 
       socket.on("new_visitor", async (user) => {
         userIsConnected = true;
@@ -65,11 +67,13 @@ const ioHandler = (req, res) => {
         user_map.delete(id);
       };
 
-      socket.on("message", (message) => {
-        console.log(message);
+      socket.on("message", async (message) => {
+        const userMessage = await insertMessageToDatabase(message);
+        console.log(userMessage.id);
         let receiver = user_map.get(message.receiverId).socket;
-        messageList.push(message.message);
-        receiver.emit("message", messageList);
+        // console.log("receiver", receiver);
+        messages.push(userMessage);
+        receiver.emit("message", userMessage);
       });
     });
 
